@@ -1,35 +1,15 @@
-// Copyright 2020-2022 @polkadot/phishing authors & contributors
+// Copyright 2020-2023 @polkadot/phishing authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import fs from 'fs';
+/// <reference types="@polkadot/dev-test/globals.d.ts" />
+
+import fs from 'node:fs';
 
 import { decodeAddress } from '@polkadot/util-crypto';
 
 const addresses = JSON.parse(fs.readFileSync('address.json', 'utf-8')) as Record<string, string[]>;
 const allowed = JSON.parse(fs.readFileSync('known.json', 'utf-8')) as Record<string, string[]>;
 const all = JSON.parse(fs.readFileSync('all.json', 'utf8')) as { allow: string[]; deny: string[] };
-
-const TOP_LEVEL = [
-  // wildcards
-  '*.fleek.co', // storageapi.fleek.co, storageapi2.fleek.co
-
-  // root domains
-  'ddns.net',
-  'herokuapp.com',
-  'hopto.org',
-  'js.org',
-  'netlify.app',
-  'pages.dev',
-  'plesk.page',
-  'servehttp.com',
-  'sytes.net',
-  'timeweb.ru',
-  'vercel.app',
-  'web.app',
-  'webflow.io',
-  'wixsite.com',
-  'zapto.org'
-];
 
 describe('added addresses', (): void => {
   it('has no malformed addresses', (): void => {
@@ -47,6 +27,8 @@ describe('added addresses', (): void => {
         })];
       })
       .filter(([, addrs]) => addrs.length);
+
+    expect(true).toBe(true);
 
     if (invalids.length) {
       throw new Error(`Invalid ss58 checksum addresses found: ${invalids.map(([url, addrs]) => `\n\t${url}: ${addrs.join(', ')}`).join('')}`);
@@ -67,10 +49,11 @@ describe('added addresses', (): void => {
 });
 
 describe('added urls', (): void => {
-  it('has no entries for allowed top-level domains', (): void => {
+  it('has no entries matching top-level domains in allow', (): void => {
     const invalids = all.deny.filter((u) =>
-      TOP_LEVEL.some((t) =>
-        t.startsWith('*.')
+      all.allow.some((t) =>
+        // for *. count the parts before the check
+        (t.startsWith('*.') && (u.split('.').length === t.split('.').length))
           ? (u.endsWith(t.substring(1)) || u === t.substring(2))
           : u === t
       )
@@ -112,7 +95,7 @@ describe('added urls', (): void => {
     }, []);
 
     expect(
-      process.env.CI_LOG
+      process.env['CI_LOG']
         ? []
         : dupes
     ).toEqual([]);

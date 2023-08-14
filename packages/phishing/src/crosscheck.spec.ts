@@ -1,10 +1,13 @@
-// Copyright 2020-2022 @polkadot/phishing authors & contributors
+// Copyright 2020-2023 @polkadot/phishing authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import fs from 'fs';
-import { load as yamlParse } from 'js-yaml';
+/// <reference types="@polkadot/dev-test/globals.d.ts" />
 
-import { fetch } from '@polkadot/x-fetch';
+import { load as yamlParse } from 'js-yaml';
+import fs from 'node:fs';
+import process from 'node:process';
+
+import { fetchJson, fetchText } from './fetch.js';
 
 interface CryptoScamEntry {
   addresses: Record<string, string[]>;
@@ -22,11 +25,40 @@ interface EthPhishing {
 
 const TICKS = '```';
 
-const ourSiteList = JSON.parse(fs.readFileSync('all.json', 'utf-8')) as { allow: string[]; deny: string[] };
+const ours = (
+  JSON.parse(fs.readFileSync('all.json', 'utf-8')) as { allow: string[]; deny: string[] }
+).deny;
 
-function assertAndLog (check: boolean, site: string, missing: unknown): void {
-  if (!check) {
-    process.env.CI_LOG && fs.appendFileSync('./.github/crosscheck.md', `
+function matchName (_url: string): boolean {
+  const url = (_url || '').toLowerCase();
+
+  return !!url && (url.includes('polka') || url.includes('kusa'));
+}
+
+function isSubdomain (ours: string[], url: string) {
+  const parts = url.split('.');
+
+  for (let i = 1; i < parts.length - 1; i++) {
+    if (ours.includes(parts.slice(i).join('.'))) {
+      // this is a sub-domain of a domain that already exists
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function assertDetails (site: string, list: string[]): void {
+  const missing = list.filter((url) =>
+    !ours.includes(url) &&
+    !isSubdomain(ours, url)
+  );
+
+  console.log(`${site} found\n`, JSON.stringify(list, null, 2));
+  console.log(`${site} missing\n`, JSON.stringify(missing, null, 2));
+
+  if (missing.length) {
+    process.env['CI_LOG'] && fs.appendFileSync('./.github/crosscheck.md', `
 
 Missing entries found from ${site}:
 
@@ -39,46 +71,59 @@ ${TICKS}
   }
 }
 
-function matchName (_url: string): boolean {
-  const url = (_url || '').toLowerCase();
-
-  return !!url && (url.includes('polka') || url.includes('kusa'));
-}
-
 const CRYPTODB = 'https://raw.githubusercontent.com/CryptoScamDB/blacklist/master/data/urls.yaml';
 const ETHPHISH = 'https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/master/src/config.json';
 
 describe('crosscheck', (): void => {
-  const ours: string[] = ourSiteList.deny;
+  let counter = 0;
+  let errors = 0;
 
-  beforeAll((): void => {
-    jest.setTimeout(120000);
+  afterEach((): void => {
+    if (++counter === 2) {
+      process.exit(errors);
+    }
   });
 
   it('has all the relevant entries from CryptoScamDb', async (): Promise<void> => {
-    const raw = await fetch(CRYPTODB).then((r) => r.text());
+    errors++;
+
+    const raw = await fetchText(CRYPTODB);
 
     // this is a hack, the text slipped in upstream
     const scamDb = yamlParse(raw.replace('∂ç', '')) as CryptoScamEntry[];
-    const filtered = scamDb.filter(({ name, subcategory }) => matchName(subcategory) || matchName(name));
-    const missing = filtered.filter(({ url }) =>
-      !ours.includes(url.replace(/https:\/\/|http:\/\//, '').split('/')[0])
+
+    assertDetails(
+      'CryptoScamDb',
+      scamDb
+        .filter(({ name, subcategory, url }) =>
+          matchName(subcategory) ||
+          matchName(name) ||
+          matchName(url)
+        )
+        .map(({ url }) =>
+          url.replace(/https:\/\/|http:\/\//, '').split('/')[0]
+        )
     );
+    expect(true).toBe(true);
 
-    console.log('CryptoScamDb found\n', JSON.stringify(filtered, null, 2));
-    console.log('CryptoScamDb missing\n', JSON.stringify(missing, null, 2));
-
-    assertAndLog(missing.length === 0, 'CryptoScamDB', missing);
+    errors--;
   });
 
   it('has polkadot/kusama entries from eth-phishing-detect', async (): Promise<void> => {
-    const ethDb = await fetch(ETHPHISH).then<EthPhishing>((r) => r.json());
-    const filtered = ethDb.blacklist.filter((url) => matchName(url));
-    const missing = filtered.filter((url) => !ours.includes(url));
+    errors++;
 
-    console.log('eth-phishing-detect found\n', JSON.stringify(filtered, null, 2));
-    console.log('eth-phishing-detect missing\n', JSON.stringify(missing, null, 2));
+    const ethDb = await fetchJson<EthPhishing>(ETHPHISH);
 
-    assertAndLog(missing.length === 0, 'eth-phishing-detect', missing);
+    assertDetails(
+      'eth-phishing-detect',
+      ethDb
+        .blacklist
+        .filter((url) =>
+          matchName(url)
+        )
+    );
+    expect(true).toBe(true);
+
+    errors--;
   });
 });

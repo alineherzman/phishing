@@ -1,11 +1,13 @@
-// Copyright 2020-2022 @polkadot/phishing authors & contributors
+// Copyright 2020-2023 @polkadot/phishing authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import fs from 'fs';
+/// <reference types="@polkadot/dev-test/globals.d.ts" />
+
+import fs from 'node:fs';
 
 import { decodeAddress } from '@polkadot/util-crypto';
 
-import { fetchJson, fetchText } from './fetch';
+import { fetchJson, fetchText } from './fetch.js';
 
 const TICKS = '```';
 const TIMEOUT = 5000;
@@ -25,7 +27,7 @@ async function loopSome (site: string, matcher: () => Promise<string[] | null>):
           found.push(address);
         }
       });
-    } catch (error) {
+    } catch {
       // console.error(error);
     }
 
@@ -43,9 +45,9 @@ async function loopSome (site: string, matcher: () => Promise<string[] | null>):
 // shared between polkadot.center & polkadot-event.com (addresses are also the same on first run)
 function checkGetWallet (site: string): Promise<[string, string[]]> {
   return loopSome(site, async (): Promise<string[] | null> => {
-    const result = await fetchJson<Record<string, string>>(`https://${site}/get_wallet.php`, TIMEOUT);
+    const result = await fetchJson<{ wallet?: string }>(`https://${site}/get_wallet.php`, TIMEOUT);
 
-    return (result && result.wallet)
+    return result?.wallet
       ? [result.wallet.replace('\r', '').trim()]
       : null;
   });
@@ -158,11 +160,18 @@ function checkAll (): Promise<[string, string[]][]> {
 }
 
 describe('addrcheck', (): void => {
-  beforeAll((): void => {
-    jest.setTimeout(2 * 60 * 1000);
+  let counter = 0;
+  let errors = 0;
+
+  afterEach((): void => {
+    if (++counter === 1) {
+      process.exit(errors);
+    }
   });
 
   it('has all known addresses', async (): Promise<void> => {
+    errors++;
+
     const _results = await checkAll();
     const results = _results.map(([url, addrs]): [string, string[]] => {
       return [url, addrs.filter((a) => {
@@ -195,8 +204,10 @@ describe('addrcheck', (): void => {
     console.log('Addresses found\n', JSON.stringify(mapFound, null, 2));
     console.log('Addresses missing\n', JSON.stringify(mapMiss, null, 2));
 
-    sites.length && process.env.CI_LOG && fs.appendFileSync('./.github/addrcheck.md', `\n\n${sites.length} urls with missing entries found at ${new Date().toUTCString()}:\n\n${TICKS}\n${JSON.stringify(mapMiss, null, 2)}\n${TICKS}\n`);
+    sites.length && process.env['CI_LOG'] && fs.appendFileSync('./.github/addrcheck.md', `\n\n${sites.length} urls with missing entries found at ${new Date().toUTCString()}:\n\n${TICKS}\n${JSON.stringify(mapMiss, null, 2)}\n${TICKS}\n`);
 
     expect(sites).toEqual([]);
+
+    errors--;
   });
 });

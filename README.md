@@ -1,4 +1,4 @@
-## @polkadot/phishing
+# @polkadot/phishing
 
 A curated list of potentially less-than-honest sites inclusive of a simple JS utility function to check any host against this list.
 
@@ -15,6 +15,26 @@ To add a new scam address (typically per site), edit [address.json](https://gith
 Making additions to the list will be reflected on merge at [polkadot.js.org/phishing/all.json](https://polkadot.js.org/phishing/all.json) &  [polkadot.js.org/phishing/address.json](https://polkadot.js.org/phishing/address.json). These can be consumed via [@polkadot/phishing](https://github.com/polkadot-js/phishing/tree/master/packages/phishing) and other tools capable of parsing JSON.
 
 The `{address, all}.json` files are also published to IPFS, via [ipns/phishing.dotapps.io](https://ipfs.io/ipns/phishing.dotapps.io/). Libraries can also consume from here for a decentralized approach.
+
+
+## Notable users
+
+The following wallets integrate either address or site blocking from these lists:
+
+<!--
+
+Note to editors: Additions welcome. Keep it alphabetical after the
+org-specific projects, i.e. polkadot{.js} first, rest alphabetical
+following that
+
+-->
+
+- [polkadot{.js} extension](https://github.com/polkadot-js/extension)
+- [polkadot{.js} apps](https://polkadot.js.org/apps)
+- [Fearless Wallet](https://fearlesswallet.io/)
+- [polkadot js Plus](http://polkadotjs.plus)
+- [SubWallet](https://subwallet.app/)
+- [Talisman](https://talisman.xyz)
 
 
 ### Integration

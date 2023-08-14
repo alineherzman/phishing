@@ -3,9 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "paths": {
-      "@polkadot/phishing": ["phishing/src"],
-      "@polkadot/phishing/*": ["phishing/src/*"]
-    },
-    "skipLibCheck": true
+      "@polkadot/phishing": ["phishing/src/index.ts"]
+    }
   }
  }

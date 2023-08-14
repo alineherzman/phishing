@@ -11,14 +11,17 @@ jobs:
       CI_LOG: 123
       GITHUB_TOKEN: ${{ secrets.GH_PAT_BOT }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 'lts/*'
     - name: check
       run: |
-        yarn install --immutable | grep -v 'YN0013'
+        yarn install --immutable
         yarn phishing:crosscheck
     - name: issue
       if: ${{ failure() }}
-      uses: JasonEtco/create-an-issue@v2
+      uses: JasonEtco/create-an-issue@e27dddc79c92bc6e4562f268fffa5ed752639abd
       with:
         filename: .github/crosscheck.md
         update_existing: true
@@ -30,14 +33,17 @@ jobs:
       CI_LOG: 123
       GITHUB_TOKEN: ${{ secrets.GH_PAT_BOT }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 'lts/*'
     - name: check
       run: |
-        yarn install --immutable | grep -v 'YN0013'
+        yarn install --immutable
         yarn phishing:addrcheck
     - name: issue
       if: ${{ failure() }}
-      uses: JasonEtco/create-an-issue@v2
+      uses: JasonEtco/create-an-issue@e27dddc79c92bc6e4562f268fffa5ed752639abd
       with:
         filename: .github/addrcheck.md
         update_existing: true

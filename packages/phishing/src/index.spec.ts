@@ -1,7 +1,9 @@
-// Copyright 2020-2022 @polkadot/phishing authors & contributors
+// Copyright 2020-2023 @polkadot/phishing authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { checkAddress, checkIfDenied } from '.';
+/// <reference types="@polkadot/dev-test/globals.d.ts" />
+
+import { checkAddress, checkIfDenied } from './index.js';
 
 describe('checkIfDenied', (): void => {
   it('returns false when host is not listed', async (): Promise<void> => {
@@ -22,9 +24,12 @@ describe('checkIfDenied', (): void => {
     ).toEqual(true);
   });
 
-  it('returns true when host in list (www-prefix)', async (): Promise<void> => {
+  it('returns true when host + subdoimain is in list', async (): Promise<void> => {
     expect(
       await checkIfDenied('www.polkadotfund.com')
+    ).toEqual(true);
+    expect(
+      await checkIfDenied('some.where.polkadotfund.com')
     ).toEqual(true);
   });
 
@@ -40,9 +45,9 @@ describe('checkIfDenied', (): void => {
     ).toEqual(true);
   });
 
-  it('returns true in list (protocol + path + #)', async (): Promise<void> => {
+  it('returns true in list (protocol + sub + host + path + #)', async (): Promise<void> => {
     expect(
-      await checkIfDenied('https://robonomics-network-xrt.cyberfi-tech-rewards-programs-claims-erc20-token.com/myetherwallet/access-my-wallet/#/input-privatekey-mnemonic-phrase-claim-bonus')
+      await checkIfDenied('https://subdomain.robonomics-network-xrt.cyberfi-tech-rewards-programs-claims-erc20-token.com/myetherwallet/access-my-wallet/#/input-privatekey-mnemonic-phrase-claim-bonus')
     ).toEqual(true);
   });
 });
